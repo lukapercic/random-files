@@ -38,7 +38,7 @@ This delivery shows the power of ACK library and accelerated EC-based signature 
 
 **WASM OC**
 |curve | recover | verify |
-|------|---------:|--------:|
+|------|---------|--------|
 | brainpoolP256r1 |  5.552ms - 6.300ms | 5.161ms - 5.500ms|
 | brainpoolP320r1 |  8.191ms - 9.100ms | 8.189ms - 8.588ms|
 | brainpoolP384r1 | 11.728ms - 17.364ms | 11.401ms - 15.157ms|
