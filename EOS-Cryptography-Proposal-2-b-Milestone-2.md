@@ -22,8 +22,7 @@ This delivery shows the power of ACK library and accelerated EC-based signature 
 | 2. | Antelope SDK library | Implementation of brainpoolP256r1, brainpoolP320r1, brainpoolP384r1, brainpoolP512r1 Brainpool curves |
 | 3. | Antelope SDK library | Implementing ECDSA key recovery from signature |
 
-
-#### Benchmark:
+### Benchmark of public key recovery form ECDSA signature vs ECDSA signature verification:
 **Native**
 |curve | recover | verify |
 |------|---------|--------|
@@ -39,15 +38,26 @@ This delivery shows the power of ACK library and accelerated EC-based signature 
 
 **WASM OC**
 |curve | recover | verify |
-|------|---------|--------|
-| brainpoolP256r1 |  5.552ms - 6.3ms | 5.161ms - 5.5ms|
-| brainpoolP320r1 |  8.191ms - 9.1ms | 8.189ms - 8.588ms|
+|------|---------:|--------:|
+| brainpoolP256r1 |  5.552ms - 6.300ms | 5.161ms - 5.500ms|
+| brainpoolP320r1 |  8.191ms - 9.100ms | 8.189ms - 8.588ms|
 | brainpoolP384r1 | 11.728ms - 17.364ms | 11.401ms - 15.157ms|
 | brainpoolP512r1 | 22.604ms - 28.364ms | 18.626ms - 25.198ms|
-| secp256k1       | 3.213ms - 3.883ms | 2.893ms - 4.2ms|
-| secp256r1       | 3.960ms - 4.670ms | 3.664ms - 4.9ms|
+| secp256k1       | 3.213ms - 3.883ms | 2.893ms - 4.200ms|
+| secp256r1       | 3.960ms - 4.670ms | 3.664ms - 4.900ms|
 | secp384r1       | 7.225ms - 8.798ms | 6.756ms - 7.743ms|
 | secp521r1       | 18.032ms - 20.886ms | 16.012ms - 20.107ms|
 
-*secp521r1 performance is lacking couse
+## Additional Information
+We encountered challenges when implementing the largest EC curves, `secp521r1`, and `brainpoolP512r1`. Due to the limited available stack space in the WebAssembly environment (8KB), we had to create a new `flexbuffer` to store the big integer state on the heap for these curves.
+
+Currently, the issue with this new buffer is that, due to the compile-time construction requirements of the ack library, the heap-allocated memory is never freed (C++17 doesn't support compile-time destructors). Therefore, the buffer should only be used in short-lived environments, such as WebAssembly.
+
+As expected and evident in the benchmark report, brainpool R curves can be significantly slower. The reason for this is the chosen curve parameters for which no special EC arithmetic can be applied (i.e., _a_ ≡ −3 (mod _p_) or _a_ ≡ 0).
+It's worth noting that there are also brainpool twisted curves (T) for which _a_ ≡ −3 (mod _p_). However, due to their limited usage in real-world applications, they were omitted from implementation.
+
+The implementation of public key recovery from ECDSA signature is, as expected, slightly slower than ECDSA signature verification. This is due to the requirement of reconstructing point `R` from the signature component `r`, which requires additional implementation of modular square root.
+The modular square root implementation uses the standard Tonelli-Shanks algorithm to calculate square roots in modular arithmetic and has additional optimization for when the curve prime is equal to _p_ ≡ 3 (mod 4). This optimization provides roughly a two-fold boost and applies to all implemented curves in the ack library.
+
+Additionally, for this milestone, we implemented point decompression from the point's x-coordinate (required for reconstruction of point `R`) and point encoding/decoding (SEC1-v2 section 2.3.3 & 2.3.4).
 
